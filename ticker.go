@@ -6,14 +6,14 @@ import (
 )
 
 type Ticker struct {
-	Ask         float64   `json:"ask,string"`
-	Bid         float64   `json:"bid,string"`
-	Last        float64   `json:"last,string"`
-	Open        float64   `json:"open,string"`
-	Low         float64   `json:"low,string"`
-	High        float64   `json:"high,string"`
-	Volume      float64   `json:"volume,string"`
-	VolumeQuote float64   `json:"volumeQuote,string"`
+	Ask         string    `json:"ask"`
+	Bid         string    `json:"bid"`
+	Last        string    `json:"last"`
+	Open        string    `json:"open"`
+	Low         string    `json:"low"`
+	High        string    `json:"high"`
+	Volume      string    `json:"volume"`
+	VolumeQuote string    `json:"volumeQuote"`
 	Timestamp   time.Time `json:"timestamp"`
 	Symbol      string    `json:"symbol"`
 }

@@ -100,6 +100,22 @@ func (b *HitBtc) GetSymbols() (symbols []Symbol, err error) {
 	return
 }
 
+func (b *HitBtc) GetSymbol(symbol string) (s Symbol, err error) {
+	r, err := b.client.do("GET", "public/symbol/"+strings.ToUpper(symbol), nil, false)
+	if err != nil {
+		return
+	}
+	var response interface{}
+	if err = json.Unmarshal(r, &response); err != nil {
+		return
+	}
+	if err = handleErr(response); err != nil {
+		return
+	}
+	err = json.Unmarshal(r, &s)
+	return
+}
+
 // GetTicker is used to get the current ticker values for a market.
 func (b *HitBtc) GetTicker(market string) (ticker Ticker, err error) {
 	r, err := b.client.do("GET", "public/ticker/"+strings.ToUpper(market), nil, false)
@@ -114,6 +130,56 @@ func (b *HitBtc) GetTicker(market string) (ticker Ticker, err error) {
 		return
 	}
 	err = json.Unmarshal(r, &ticker)
+	return
+}
+
+func (b *HitBtc) GetTickers() (ticker []Ticker, err error) {
+	r, err := b.client.do("GET", "public/ticker", nil, false)
+	if err != nil {
+		return
+	}
+	var response interface{}
+	if err = json.Unmarshal(r, &response); err != nil {
+		return
+	}
+	if err = handleErr(response); err != nil {
+		return
+	}
+	err = json.Unmarshal(r, &ticker)
+	return
+}
+
+type Candle struct {
+	Timestamp   string `json:"timestamp"`
+	Open        string `json:"open"`
+	Close       string `json:"close"`
+	Low         string `json:"min"`
+	High        string `json:"max"`
+	Volume      string `json:"volume"`
+	VolumeQuote string `json:"volumeQuote"`
+}
+
+func (b *HitBtc) GetCandles(symbol string, period string, limit int) (candles []Candle, err error) {
+	payload := make(map[string]string)
+	if limit > 0 {
+		payload["limit"] = strconv.Itoa(limit)
+	}
+	if period != "" {
+		payload["period"] = strings.ToUpper(period)
+	}
+
+	r, err := b.client.do("GET", fmt.Sprintf("public/candles/%s", strings.ToUpper(symbol)), payload, false)
+	if err != nil {
+		return
+	}
+	var response interface{}
+	if err = json.Unmarshal(r, &response); err != nil {
+		return
+	}
+	if err = handleErr(response); err != nil {
+		return
+	}
+	err = json.Unmarshal(r, &candles)
 	return
 }
 
@@ -220,4 +286,76 @@ func (b *HitBtc) GetTransactions(start uint64, end uint64, limit uint32) (transa
 	}
 	err = json.Unmarshal(r, &transactions)
 	return
+}
+
+type Order struct {
+	ID            string    `json:"id"`
+	ClientOrderID string    `json:"clientOrderId"`
+	Symbol        string    `json:"symbol"`
+	Side          string    `json:"side"`
+	Status        string    `json:"status"`
+	Type          string    `json:"type"`
+	TimeInForce   string    `json:"timeInForce"`
+	Price         float64   `json:"price"`
+	StopPrice     float64   `json:"stopPrice"`
+	Quantity      float64   `json:"quantity"`
+	CumQuantity   float64   `json:"cumQuantity"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+	ExpireTime    time.Time `json:"expireTime"`
+}
+
+type CreateOrderResponse struct {
+	ID            string `json:"id"`
+	ClientOrderID string `json:"clientOrderId"`
+	Symbol        string `json:"symbol"`
+	Side          string `json:"side"`
+	Status        string `json:"status"`
+	Type          string `json:"type"`
+	TimeInForce   string `json:"timeInForce"`
+	Price         string `json:"price"`
+	StopPrice     string `json:"stopPrice"`
+	Quantity      string `json:"quantity"`
+	CumQuantity   string `json:"cumQuantity"`
+	CreatedAt     string `json:"createdAt"`
+	UpdatedAt     string `json:"updatedAt"`
+	ExpireTime    string `json:"expireTime"`
+}
+
+func (b *HitBtc) CreateOrder(o Order) (order CreateOrderResponse, err error) {
+	payload := make(map[string]string)
+
+	payload["symbol"] = o.Symbol
+	payload["side"] = o.Side
+	payload["quantity"] = strconv.FormatFloat(o.Quantity, 'f', -1, 64)
+	if o.Type != "" {
+		payload["type"] = o.Type
+	}
+	if o.TimeInForce != "" {
+		payload["timeInForce"] = o.TimeInForce
+	}
+	if o.Price > 0 {
+		payload["price"] = strconv.FormatFloat(o.Price, 'f', -1, 64)
+	}
+
+	// log.Print(payload)
+
+	r, err := b.client.do("POST", "order", payload, true)
+
+	if err != nil {
+		e := ErrorResponse{}
+		_ = json.Unmarshal(r, &e)
+		return order, fmt.Errorf("%d %s %s", e.Error.Code, e.Error.Message, e.Error.Description)
+	}
+
+	var response interface{}
+	if err = json.Unmarshal(r, &response); err != nil {
+		return order, err
+	}
+
+	if err = handleErr(response); err != nil {
+		return order, err
+	}
+	err = json.Unmarshal(r, &order)
+	return order, err
 }

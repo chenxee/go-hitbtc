@@ -20,6 +20,16 @@ type client struct {
 	debug       bool
 }
 
+type ErrorDetail struct {
+	Code        int    `json:"code"`
+	Message     string `json:"message"`
+	Description string `json:"description"`
+}
+
+type ErrorResponse struct {
+	Error ErrorDetail `json:"error"`
+}
+
 // NewClient return a new HitBtc HTTP client
 func NewClient(apiKey, apiSecret string) (c *client) {
 	return &client{apiKey, apiSecret, &http.Client{}, 30 * time.Second, false}
@@ -123,12 +133,16 @@ func (c *client) do(method string, ressource string, payload map[string]string, 
 		}
 		formData = formValues.Encode()
 	}
+
 	req, err := http.NewRequest(method, rawurl, strings.NewReader(formData))
+
 	if err != nil {
 		return
 	}
+
 	if method == "POST" || method == "PUT" {
-		req.Header.Add("Content-Type", "application/json;charset=utf-8")
+		// req.Header.Add("Content-Type", "application/json;charset=utf-8")
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	}
 	req.Header.Add("Accept", "application/json")
 
@@ -148,12 +162,12 @@ func (c *client) do(method string, ressource string, payload map[string]string, 
 
 	defer resp.Body.Close()
 	response, err = ioutil.ReadAll(resp.Body)
-	//fmt.Println(fmt.Sprintf("reponse %s", response), err)
+
 	if err != nil {
 		return response, err
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 401 {
-	//if resp.StatusCode != 200 {
+		//if resp.StatusCode != 200 {
 		err = errors.New(resp.Status)
 	}
 	return response, err
