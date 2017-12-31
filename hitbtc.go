@@ -359,3 +359,35 @@ func (b *HitBtc) CreateOrder(o Order) (order CreateOrderResponse, err error) {
 	err = json.Unmarshal(r, &order)
 	return order, err
 }
+
+type OrderbookUnit struct {
+	Price string `json:"price"`
+	Size  string `json:"size"`
+}
+
+type Orderbook struct {
+	Ask []OrderbookUnit `json:"ask"`
+	Bid []OrderbookUnit `json:"bid"`
+}
+
+func (b *HitBtc) GetOrderbook(symbol string, limit int) (ob Orderbook, err error) {
+	payload := make(map[string]string)
+
+	if limit >= 0 {
+		payload["limit"] = strconv.Itoa(limit)
+	}
+	r, err := b.client.do("GET", "public/orderbook/"+strings.ToUpper(symbol), payload, false)
+	if err != nil {
+		return
+	}
+	var response interface{}
+	if err = json.Unmarshal(r, &response); err != nil {
+		return
+	}
+
+	if err = handleErr(response); err != nil {
+		return
+	}
+	err = json.Unmarshal(r, &ob)
+	return
+}
